@@ -4,13 +4,14 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import AppHeader from '../AppHeader'
-import { supabase } from '@/lib/supabaseClient'
+import { useSupabase } from '../SupabaseProvider'
 import { money } from '@/lib/format'
 
 const EMPTY = { name: '', category: '', price: '', cost: '', stock: '' }
 
 export default function ProductForm({ productId = null }) {
   const router = useRouter()
+  const { supabase } = useSupabase()
   const isEdit = Boolean(productId)
 
   const [form, setForm] = useState(EMPTY)
@@ -21,6 +22,7 @@ export default function ProductForm({ productId = null }) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    if (!supabase) return
     supabase
       .from('products')
       .select('category')
@@ -29,10 +31,10 @@ export default function ProductForm({ productId = null }) {
         const unique = [...new Set((data ?? []).map((r) => r.category).filter(Boolean))]
         setCategories(unique.sort((a, b) => a.localeCompare(b, 'es')))
       })
-  }, [])
+  }, [supabase])
 
   useEffect(() => {
-    if (!isEdit) return
+    if (!isEdit || !supabase) return
     supabase
       .from('products')
       .select('*')
@@ -51,7 +53,7 @@ export default function ProductForm({ productId = null }) {
           })
         setLoading(false)
       })
-  }, [isEdit, productId])
+  }, [isEdit, productId, supabase])
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -63,6 +65,7 @@ export default function ProductForm({ productId = null }) {
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
+    if (!supabase) return setError('Todavía no hay sesión con la base de datos.')
 
     const name = form.name.trim()
     if (!name) return setError('El nombre es obligatorio.')
@@ -97,6 +100,7 @@ export default function ProductForm({ productId = null }) {
   }
 
   async function handleDelete() {
+    if (!supabase) return setError('Todavía no hay sesión con la base de datos.')
     const ok = window.confirm(
       `¿Borrar "${form.name}" del inventario?\n\nLas ventas que ya se registraron se conservan en los reportes.`
     )

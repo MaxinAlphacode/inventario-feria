@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AppHeader from './AppHeader'
 import SetupNotice from './SetupNotice'
-import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient'
+import { useSupabase, isSupabaseConfigured } from './SupabaseProvider'
 import { money, num } from '@/lib/format'
 
 export default function InventarioPage() {
+  const { supabase, status: sessionStatus, error: sessionError } = useSupabase()
   const [products, setProducts] = useState([])
   // Sin credenciales no hay nada que cargar: arrancamos directo en "listo"
   const [loading, setLoading] = useState(isSupabaseConfigured)
@@ -26,6 +27,7 @@ export default function InventarioPage() {
   }, [])
 
   const fetchAll = useCallback(async () => {
+    if (!supabase) return
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -37,21 +39,21 @@ export default function InventarioPage() {
       setProducts(data ?? [])
     }
     setLoading(false)
-  }, [])
+  }, [supabase])
 
-  // Carga inicial
+  // Carga inicial (espera a que el provider entregue la sesion)
   useEffect(() => {
-    if (!isSupabaseConfigured) return
+    if (!supabase) return
     // fetchAll es async: los setState ocurren despues del await, no de forma
     // sincrona dentro del efecto (falso positivo de la regla).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAll()
-  }, [fetchAll])
+  }, [supabase, fetchAll])
 
   // Realtime: mantiene el stock sincronizado entre todos los dispositivos
   // (incluye altas/bajas hechas desde la importación masiva por Excel).
   useEffect(() => {
-    if (!isSupabaseConfigured) return
+    if (!supabase) return
 
     const channel = supabase
       .channel('inventario')
@@ -77,12 +79,12 @@ export default function InventarioPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [supabase])
 
   // Red de seguridad: si Realtime se cayo mientras la pantalla estaba en
   // segundo plano, refrescamos al volver.
   useEffect(() => {
-    if (!isSupabaseConfigured) return
+    if (!supabase) return
     const onVisible = () => {
       if (document.visibilityState === 'visible') fetchAll()
     }
@@ -92,7 +94,7 @@ export default function InventarioPage() {
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
     }
-  }, [fetchAll])
+  }, [supabase, fetchAll])
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
@@ -142,7 +144,7 @@ export default function InventarioPage() {
   const cartTotal = cart.reduce((acc, i) => acc + i.qty * i.price, 0)
 
   async function checkout() {
-    if (cart.length === 0 || checkingOut) return
+    if (cart.length === 0 || checkingOut || !supabase) return
     setCheckingOut(true)
 
     const { data, error } = await supabase.rpc('sell_cart', {
@@ -191,6 +193,19 @@ export default function InventarioPage() {
       <>
         <AppHeader />
         <SetupNotice />
+      </>
+    )
+  }
+
+  if (sessionStatus === 'error') {
+    return (
+      <>
+        <AppHeader />
+        <main className="mx-auto w-full max-w-lg flex-1 px-4 py-10">
+          <p className="rounded-2xl bg-brand-soft px-4 py-3 text-sm text-brand-dark">
+            No se pudo iniciar la sesión con la base de datos: {sessionError}
+          </p>
+        </main>
       </>
     )
   }

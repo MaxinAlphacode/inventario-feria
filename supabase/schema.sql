@@ -103,29 +103,44 @@ end;
 $$;
 
 -- ============================= RLS =============================
--- Nota: todos los dispositivos comparten la misma anon key (la barrera
--- real es el PIN a nivel de app), asi que RLS no puede distinguir usuarios.
--- Es un trade-off aceptable para una herramienta interna y temporal.
+-- IMPORTANTE: los permisos son para el rol "authenticated", NO para "anon".
+--
+-- La llave anon viaja dentro del JS del navegador, y Next.js sirve sus archivos
+-- estaticos SIN pasar por el PIN. Si estas politicas dieran acceso a "anon",
+-- cualquiera con la URL podria extraer esa llave de un chunk y leer o borrar
+-- toda la base saltandose el PIN.
+--
+-- En su lugar, el PIN se valida en el servidor y este emite un JWT con rol
+-- "authenticated" firmado con SUPABASE_JWT_SECRET (ver lib/supabaseToken.js).
+-- Sin ese token, la llave anon no sirve para nada.
 
 alter table products enable row level security;
 alter table sales    enable row level security;
 
+-- Politicas viejas basadas en anon (de versiones anteriores del esquema)
 drop policy if exists "anon select products" on products;
 drop policy if exists "anon insert products" on products;
 drop policy if exists "anon update products" on products;
 drop policy if exists "anon delete products" on products;
 drop policy if exists "anon select sales"    on sales;
 
-create policy "anon select products" on products for select to anon using (true);
-create policy "anon insert products" on products for insert to anon with check (true);
-create policy "anon update products" on products for update to anon using (true) with check (true);
-create policy "anon delete products" on products for delete to anon using (true);
+drop policy if exists "app select products" on products;
+drop policy if exists "app insert products" on products;
+drop policy if exists "app update products" on products;
+drop policy if exists "app delete products" on products;
+drop policy if exists "app select sales"    on sales;
+
+create policy "app select products" on products for select to authenticated using (true);
+create policy "app insert products" on products for insert to authenticated with check (true);
+create policy "app update products" on products for update to authenticated using (true) with check (true);
+create policy "app delete products" on products for delete to authenticated using (true);
 
 -- sales: solo lectura directa (reportes). Las escrituras pasan SIEMPRE por
 -- la funcion security definer de arriba.
-create policy "anon select sales" on sales for select to anon using (true);
+create policy "app select sales" on sales for select to authenticated using (true);
 
-grant execute on function sell_cart(jsonb) to anon;
+revoke execute on function sell_cart(jsonb) from anon;
+grant  execute on function sell_cart(jsonb) to authenticated;
 
 -- =========================== REALTIME ===========================
 -- Propaga los cambios de stock a todos los dispositivos conectados.

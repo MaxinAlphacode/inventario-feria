@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppHeader from '../AppHeader'
 import SetupNotice from '../SetupNotice'
-import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient'
+import { useSupabase, isSupabaseConfigured } from '../SupabaseProvider'
 import { money, num } from '@/lib/format'
 
 const RANGES = [
@@ -12,6 +12,7 @@ const RANGES = [
 ]
 
 export default function ReportesPage() {
+  const { supabase, status: sessionStatus, error: sessionError } = useSupabase()
   const [sales, setSales] = useState([])
   const [products, setProducts] = useState([])
   const [range, setRange] = useState('today')
@@ -20,6 +21,7 @@ export default function ReportesPage() {
   const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
+    if (!supabase) return
     const [salesRes, productsRes] = await Promise.all([
       supabase.from('sales').select('*').order('sold_at', { ascending: false }),
       supabase.from('products').select('*'),
@@ -33,19 +35,19 @@ export default function ReportesPage() {
       setProducts(productsRes.data ?? [])
     }
     setLoading(false)
-  }, [])
+  }, [supabase])
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return
+    if (!supabase) return
     // load es async: los setState ocurren despues del await, no de forma
     // sincrona dentro del efecto (falso positivo de la regla).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
-  }, [load])
+  }, [supabase, load])
 
   // Se mantiene al dia mientras el resto del equipo vende
   useEffect(() => {
-    if (!isSupabaseConfigured) return
+    if (!supabase) return
     const channel = supabase
       .channel('reportes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, load)
@@ -54,7 +56,7 @@ export default function ReportesPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [load])
+  }, [supabase, load])
 
   const visibleSales = useMemo(() => {
     if (range === 'all') return sales
@@ -118,6 +120,19 @@ export default function ReportesPage() {
 
     return { rows, totals }
   }, [visibleSales, products])
+
+  if (sessionStatus === 'error') {
+    return (
+      <>
+        <AppHeader />
+        <main className="mx-auto w-full max-w-lg flex-1 px-4 py-10">
+          <p className="rounded-2xl bg-brand-soft px-4 py-3 text-sm text-brand-dark">
+            No se pudo iniciar la sesión con la base de datos: {sessionError}
+          </p>
+        </main>
+      </>
+    )
+  }
 
   if (!isSupabaseConfigured) {
     return (

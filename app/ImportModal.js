@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { supabase } from '@/lib/supabaseClient'
+import { useSupabase } from './SupabaseProvider'
 
 // El manejo de .xlsx vive en /api/excel/* (servidor): la libreria de Excel no
 // funciona de forma confiable en el navegador y pesa ~1MB.
@@ -28,6 +28,7 @@ const TABS = [
 ]
 
 export default function ImportModal({ open, onClose }) {
+  const { supabase } = useSupabase()
   const [tab, setTab] = useState('create')
   const [busy, setBusy] = useState(false)
   const [parsed, setParsed] = useState(null) // { rows, errors, fileName }
@@ -71,6 +72,7 @@ export default function ImportModal({ open, onClose }) {
     setResult(null)
     setBusy(true)
     try {
+      if (!supabase) throw new Error('Todavía no hay sesión con la base de datos.')
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -111,6 +113,7 @@ export default function ImportModal({ open, onClose }) {
 
   async function confirmImport() {
     if (!parsed || parsed.rows.length === 0) return
+    if (!supabase) return setResult({ error: 'Todavía no hay sesión con la base de datos.' })
     setBusy(true)
 
     if (tab === 'create') {

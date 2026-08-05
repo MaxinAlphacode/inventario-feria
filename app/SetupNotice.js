@@ -12,6 +12,7 @@ export default function SetupNotice() {
         <pre className="mt-4 overflow-x-auto rounded-xl bg-cream p-4 text-xs leading-relaxed">
 {`NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
+SUPABASE_JWT_SECRET=...
 APP_PIN=elige-un-pin`}
         </pre>
         <p className="mt-4 text-sm text-muted">

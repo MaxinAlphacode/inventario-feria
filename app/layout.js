@@ -1,4 +1,5 @@
 import "./globals.css";
+import SupabaseProvider from "./SupabaseProvider";
 
 export const metadata = {
   title: "Inventario Feria",
@@ -15,7 +16,9 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <SupabaseProvider>{children}</SupabaseProvider>
+      </body>
     </html>
   );
 }

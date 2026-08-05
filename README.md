@@ -22,6 +22,9 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + Realtime) · Tailwind CSS
    Realtime. Se puede volver a correr sin romper nada, incluso para actualizar
    un proyecto que ya tenía una versión anterior del esquema.
 3. Ir a **Settings → API** y copiar `Project URL` y la llave `anon public`.
+4. En la misma pantalla, copiar el **JWT Secret** (en *JWT Settings*; en proyectos
+   nuevos puede aparecer bajo *API Keys → Legacy*). Es distinto de la llave anon
+   y **no debe publicarse**: es lo que firma la sesión de la app.
 
 ## 2. Correr localmente
 
@@ -30,6 +33,7 @@ Crear un archivo `.env.local` en la raíz (ver [`.env.example`](.env.example)):
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
+SUPABASE_JWT_SECRET=...
 APP_PIN=elige-un-pin
 ```
 
@@ -53,7 +57,7 @@ npx vercel login
 npx vercel link
 ```
 
-Cargar las tres variables de entorno (pide el valor para cada ambiente):
+Cargar las cuatro variables de entorno (pide el valor para cada ambiente):
 
 ```bash
 npx vercel env add NEXT_PUBLIC_SUPABASE_URL
@@ -61,6 +65,10 @@ npx vercel env add NEXT_PUBLIC_SUPABASE_URL
 
 ```bash
 npx vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+```
+
+```bash
+npx vercel env add SUPABASE_JWT_SECRET
 ```
 
 ```bash
@@ -106,8 +114,28 @@ Además se refresca al volver a la pestaña, por si se perdió la conexión. La
 consistencia real no depende de esto, sino de la función transaccional de
 arriba.
 
-**El PIN** es una barrera simple de aplicación (cookie `httpOnly` con el hash
-del PIN, validada en `proxy.js`), no un sistema de usuarios. Todos comparten la
-misma llave `anon` de Supabase, así que las políticas de acceso no distinguen
-quién hace qué: es adecuado para una herramienta interna y temporal, no para
-datos sensibles.
+**El PIN protege la base de datos, no solo las pantallas.** Este es el detalle
+que más fácil se hace mal, así que vale explicarlo.
+
+La llave `anon` de Supabase se compila dentro del JavaScript del navegador
+(es lo que significa el prefijo `NEXT_PUBLIC_`), y Next.js sirve sus archivos
+estáticos **sin** pasar por el proxy del PIN. Si las políticas RLS le dieran
+permisos al rol `anon`, cualquiera con la URL podría abrir un chunk de
+`/_next/static/`, sacar la llave y consultar la API de Supabase directamente:
+leería el inventario completo y las ventas, y podría borrarlo todo, sin
+escribir el PIN ni una vez.
+
+Por eso el flujo es:
+
+1. `proxy.js` revisa una cookie `httpOnly` con el hash del PIN y, si falta,
+   redirige a `/pin`. Esto cubre páginas **y** rutas `/api/*`.
+2. Ya adentro, el cliente pide `/api/token`. El servidor firma ahí un JWT con
+   rol `authenticated` usando `SUPABASE_JWT_SECRET`, que nunca sale del
+   servidor (ver [`lib/supabaseToken.js`](lib/supabaseToken.js)).
+3. Las políticas RLS exigen `authenticated`, no `anon`. Sin ese token la llave
+   pública no sirve para nada.
+
+Sigue siendo una credencial compartida por todo el equipo: no distingue quién
+hizo cada venta, y quien tenga el PIN tiene acceso completo. Es lo adecuado
+para una herramienta interna y temporal, pero la base ya no queda expuesta a
+cualquiera que tenga el enlace.
