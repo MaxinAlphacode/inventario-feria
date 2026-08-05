@@ -29,12 +29,17 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Evita el zoom automatico de iOS al enfocar inputs durante la feria */
-input,
-select,
-textarea,
-button {
-  font-size: 16px;
+/* Evita el zoom automatico de iOS al enfocar un campo durante la feria: Safari
+   hace zoom si la fuente mide menos de 16px.
+   Va en @layer base a proposito. Sin capa, esta regla le gana a TODAS las
+   utilidades de Tailwind (lo no estratificado tiene prioridad sobre lo
+   estratificado), y terminaba anulando text-sm en botones e inputs. */
+@layer base {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* Quita las flechitas de los number inputs (molestan en tactil) */
