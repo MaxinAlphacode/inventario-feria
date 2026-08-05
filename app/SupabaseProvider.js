@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -40,15 +41,29 @@ export function useSupabase() {
 export default function SupabaseProvider({ children }) {
   const [status, setStatus] = useState(isSupabaseConfigured ? 'loading' : 'unconfigured')
   const [error, setError] = useState(null)
+  const pathname = usePathname()
+  const router = useRouter()
+
+  // El provider vive en el layout raiz, asi que tambien monta en /pin, donde
+  // todavia no hay cookie y pedir el token daria un redirect a /pin.
+  const needsSession = isSupabaseConfigured && pathname !== '/pin'
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return
+    if (!needsSession) return
 
     let cancelled = false
 
     async function loadToken() {
       try {
         const res = await fetch('/api/token')
+
+        // Sin cookie valida el proxy redirige a /pin, que devuelve HTML: no
+        // tiene sentido parsearlo como JSON, hay que volver a pedir el PIN.
+        if (!res.headers.get('content-type')?.includes('application/json')) {
+          router.push('/pin')
+          return
+        }
+
         const json = await res.json()
         if (cancelled) return
         if (!res.ok) throw new Error(json?.error ?? 'No se pudo iniciar la sesión.')
@@ -72,7 +87,7 @@ export default function SupabaseProvider({ children }) {
       cancelled = true
       clearInterval(id)
     }
-  }, [])
+  }, [needsSession, router])
 
   const value = useMemo(
     // Recien exponemos el cliente cuando ya hay token, para que ninguna pantalla
