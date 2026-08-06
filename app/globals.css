@@ -1,21 +1,34 @@
 @import "tailwindcss";
 
+/* Paleta de la marca (Koket). El blanco domina: el morado y el rosa entran
+   solo en acentos, bordes y estados, no en fondos grandes. */
 @theme {
-  --color-cream: #fbf7f1;
+  --color-cream: #faf8fb;
   --color-paper: #ffffff;
-  --color-ink: #2a2320;
-  --color-muted: #857a72;
-  --color-line: #ece4da;
+  --color-ink: #232426;
+  --color-muted: #7d7684;
+  --color-line: #ece7f0;
 
-  --color-brand: #e0533d;
-  --color-brand-dark: #c53f2b;
-  --color-brand-soft: #fdeee9;
+  /* Morado de marca: acciones principales y navegacion */
+  --color-brand: #7158a6;
+  --color-brand-dark: #5c4589;
+  --color-brand-soft: #f3eefa;
 
-  --color-sell: #0e9b74;
-  --color-sell-dark: #0a7d5c;
+  /* Lila y rosa: acentos suaves */
+  --color-lilac: #ceb4d9;
+  --color-lilac-soft: #f0e8f4;
+  --color-pink: #f2aec7;
+  --color-pink-soft: #fdeef4;
 
-  --color-warn: #b45309;
-  --color-warn-soft: #fef3c7;
+  /* Vender / dinero. Verde sobrio para que no compita con la marca. */
+  --color-sell: #3f8f6f;
+  --color-sell-dark: #33765b;
+
+  --color-warn: #b06a1f;
+  --color-warn-soft: #fdf1e3;
+
+  --color-danger: #c0392b;
+  --color-danger-soft: #fdecea;
 
   --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;

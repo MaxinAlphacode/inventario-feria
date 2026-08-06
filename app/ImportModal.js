@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSupabase } from './SupabaseProvider'
+import { useFair } from './FairProvider'
 
 // El manejo de .xlsx vive en /api/excel/* (servidor): la libreria de Excel no
 // funciona de forma confiable en el navegador y pesa ~1MB.
@@ -29,6 +30,7 @@ const TABS = [
 
 export default function ImportModal({ open, onClose }) {
   const { supabase } = useSupabase()
+  const { activeFair } = useFair()
   const [tab, setTab] = useState('create')
   const [busy, setBusy] = useState(false)
   const [parsed, setParsed] = useState(null) // { rows, errors, fileName }
@@ -76,6 +78,7 @@ export default function ImportModal({ open, onClose }) {
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .eq('fair_id', activeFair?.id)
         .order('name', { ascending: true })
       if (error) throw new Error(error.message)
 
@@ -118,6 +121,7 @@ export default function ImportModal({ open, onClose }) {
 
     if (tab === 'create') {
       const payload = parsed.rows.map((r) => ({
+        fair_id: activeFair?.id,
         name: r.name,
         category: r.category,
         price: r.price,
@@ -142,6 +146,7 @@ export default function ImportModal({ open, onClose }) {
         supabase.from('products').upsert(
           withId.map((r) => ({
             id: r.id,
+            fair_id: activeFair?.id,
             name: r.name,
             category: r.category,
             price: r.price,
@@ -157,6 +162,7 @@ export default function ImportModal({ open, onClose }) {
       jobs.push(
         supabase.from('products').insert(
           withoutId.map((r) => ({
+            fair_id: activeFair?.id,
             name: r.name,
             category: r.category,
             price: r.price,

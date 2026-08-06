@@ -1,5 +1,6 @@
 import "./globals.css";
 import SupabaseProvider from "./SupabaseProvider";
+import FairProvider from "./FairProvider";
 
 export const metadata = {
   title: "Inventario Feria",
@@ -10,14 +11,16 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#fbf7f1",
+  themeColor: "#faf8fb",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="es" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <SupabaseProvider>{children}</SupabaseProvider>
+        <SupabaseProvider>
+          <FairProvider>{children}</FairProvider>
+        </SupabaseProvider>
       </body>
     </html>
   );

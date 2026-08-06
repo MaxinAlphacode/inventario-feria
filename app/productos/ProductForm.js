@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import AppHeader from '../AppHeader'
 import { useSupabase } from '../SupabaseProvider'
+import { useFair } from '../FairProvider'
 import { money } from '@/lib/format'
 
 const EMPTY = { name: '', category: '', price: '', cost: '', stock: '' }
@@ -12,6 +13,7 @@ const EMPTY = { name: '', category: '', price: '', cost: '', stock: '' }
 export default function ProductForm({ productId = null }) {
   const router = useRouter()
   const { supabase } = useSupabase()
+  const { activeFair } = useFair()
   const isEdit = Boolean(productId)
 
   const [form, setForm] = useState(EMPTY)
@@ -22,16 +24,17 @@ export default function ProductForm({ productId = null }) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!supabase) return
+    if (!supabase || !activeFair) return
     supabase
       .from('products')
       .select('category')
+      .eq('fair_id', activeFair.id)
       .not('category', 'is', null)
       .then(({ data }) => {
         const unique = [...new Set((data ?? []).map((r) => r.category).filter(Boolean))]
         setCategories(unique.sort((a, b) => a.localeCompare(b, 'es')))
       })
-  }, [supabase])
+  }, [supabase, activeFair])
 
   useEffect(() => {
     if (!isEdit || !supabase) return
@@ -91,7 +94,7 @@ export default function ProductForm({ productId = null }) {
           .from('products')
           .update({ ...payload, updated_at: new Date().toISOString() })
           .eq('id', productId)
-      : await supabase.from('products').insert(payload)
+      : await supabase.from('products').insert({ ...payload, fair_id: activeFair?.id })
     setSaving(false)
 
     if (dbError) return setError(dbError.message)
