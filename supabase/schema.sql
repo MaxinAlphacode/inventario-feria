@@ -276,11 +276,19 @@ create policy "app delete sales" on sales for delete to authenticated using (tru
 create policy "app all fairs"      on fairs      for all to authenticated using (true) with check (true);
 create policy "app all promotions" on promotions for all to authenticated using (true) with check (true);
 
-revoke execute on function sell_cart(uuid, jsonb) from anon;
-grant  execute on function sell_cart(uuid, jsonb)   to authenticated;
-grant  execute on function update_sale(uuid, jsonb) to authenticated;
-grant  execute on function start_fair(text, date, date, text, uuid) to authenticated;
-grant  execute on function delete_fair(uuid) to authenticated;
+-- OJO: Postgres concede EXECUTE a PUBLIC por defecto, y PUBLIC incluye a anon.
+-- Sin estos revokes, cualquiera con la llave anon (que viaja en el JS del
+-- navegador) podria llamar delete_fair y borrar una feria entera saltandose
+-- el PIN. Hay que revocar ANTES de conceder.
+revoke execute on function sell_cart(uuid, jsonb)   from public, anon;
+revoke execute on function update_sale(uuid, jsonb) from public, anon;
+revoke execute on function delete_fair(uuid)        from public, anon;
+revoke execute on function start_fair(text, date, date, text, uuid) from public, anon;
+
+grant execute on function sell_cart(uuid, jsonb)   to authenticated;
+grant execute on function update_sale(uuid, jsonb) to authenticated;
+grant execute on function delete_fair(uuid)        to authenticated;
+grant execute on function start_fair(text, date, date, text, uuid) to authenticated;
 
 -- =========================== REALTIME ===========================
 do $$
