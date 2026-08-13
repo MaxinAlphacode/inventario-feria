@@ -285,7 +285,18 @@ export default function InventarioPage() {
     <>
       <AppHeader />
 
-      <div className="mx-auto flex w-full max-w-7xl flex-1 gap-5 px-4 pb-28 pt-4 md:pb-8">
+      {/*
+        flex-col en movil, flex-row recien en lg: FairSidebar devuelve un
+        fragmento con el aside de escritorio (hidden lg:block) y la fila
+        movil (lg:hidden) como hermanos. Si este contenedor fuera "flex"
+        (fila) en TODOS los tamanos, en movil la fila de ferias quedaria
+        como hermana de <main> dentro de esa fila, y el align-items:stretch
+        por defecto la estira a la altura completa de la pagina (y eso se
+        propaga a sus botones, que tambien son flex). En columna, el cross
+        axis es el ancho, no el alto, asi que solo se estira a 100% de ancho
+        (lo esperado) y la altura queda segun su contenido.
+      */}
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-4 pb-28 pt-4 md:pb-8 lg:flex-row">
         <FairSidebar />
 
         <main className="min-w-0 flex-1">

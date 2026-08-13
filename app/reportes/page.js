@@ -241,7 +241,10 @@ export default function ReportesPage() {
     <>
       <AppHeader />
 
-      <div className="mx-auto flex w-full max-w-7xl flex-1 gap-5 px-4 pb-16 pt-4">
+      {/* Ver el comentario equivalente en app/page.js: flex-col en movil evita
+          que la fila de ferias (lg:hidden) se estire a la altura completa de
+          la pagina al compartir fila con <main>. */}
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-4 pb-16 pt-4 lg:flex-row">
         <FairSidebar />
 
         <main className="min-w-0 flex-1">
